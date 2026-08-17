@@ -1,0 +1,16 @@
+{
+  "name": "شركة شموع الماضي - متتبع المهام والخطوات",
+  "short_name": "متتبع المهام",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fcfbf9",
+  "theme_color": "#5a3818",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    { "src": "logo.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "logo.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
