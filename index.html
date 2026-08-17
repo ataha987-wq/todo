@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام إدارة المهام والخطوات</title>
+  <style>
+    :root {
+      --primary-color: #2563eb;
+      --bg-color: #f8fafc;
+      --card-bg: #ffffff;
+      --text-color: #1e293b;
+      --border-color: #e2e8f0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 20px;
+      direction: rtl;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .status-badge {
+      font-size: 0.85rem;
+      padding: 4px 12px;
+      border-radius: 20px;
+      background-color: #e2e8f0;
+      color: #475569;
+    }
+
+    .status-badge.syncing { background-color: #fef08a; color: #854d0e; }
+    .status-badge.success { background-color: #dcfce7; color: #166534; }
+    .status-badge.error { background-color: #fee2e2; color: #991b1b; }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      border: 1px solid var(--border-color);
+    }
+
+    .form-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+
+    button {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    button:hover { opacity: 0.9; }
+
+    .task-item {
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 15px;
+      margin-bottom: 12px;
+      background: #fff;
+    }
+
+    .task-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .task-title {
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+
+    .task-title.completed {
+      text-decoration: line-through;
+      color: #94a3b8;
+    }
+
+    .steps-list {
+      margin-top: 10px;
+      padding-right: 20px;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .step-text.completed {
+      text-decoration: line-through;
+      color: #94a3b8;
+    }
+
+    .add-step-form {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .add-step-form input {
+      padding: 6px 10px;
+      font-size: 0.9rem;
+    }
+
+    .add-step-form button {
+      padding: 6px 12px;
+      font-size: 0.85rem;
+      background-color: #475569;
+    }
+
+    .btn-delete {
+      background-color: #ef4444;
+      padding: 4px 8px;
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h2>تطبيق إدارة المهام والخطوات</h2>
+    <span id="syncStatus" class="status-badge">جاري التحميل...</span>
+  </div>
+
+  <div class="card">
+    <div class="form-group">
+      <input type="text" id="newTaskInput" placeholder="أدخل اسم المهمة الجديدة...">
+      <button onclick="addTask()">إضافة مهمة</button>
+    </div>
+  </div>
+
+  <div id="tasksList"></div>
+</div>
+
+<script>
+  // رابط Google Apps Script الخاص بك
+  const SCRIPT_URL = 'ضع_رابط_WEB_APP_هنا';
+
+  let tasks = [];
+
+  // 1. تحميل المهام من السيرفر/التخزين المحلي عند فتح الصفحة
+  window.addEventListener('DOMContentLoaded', () => {
+    loadTasks();
+  });
+
+  function setSyncStatus(text, className) {
+    const statusEl = document.getElementById('syncStatus');
+    statusEl.textContent = text;
+    statusEl.className = `status-badge ${className}`;
+  }
+
+  // قراءة المهام من السيرفر والشيت
+  async function loadTasks() {
+    setSyncStatus('جاري المزامنة...', 'syncing');
+
+    // أولاً: عرض البيانات المحفوظة محلياً بسرعة
+    const localData = localStorage.getItem('my_tasks_data');
+    if (localData) {
+      try {
+        tasks = JSON.parse(localData);
+        renderTasks();
+      } catch (e) {
+        console.error("خطأ في قراءة localStorage:", e);
+      }
+    }
+
+    // ثانياً: جلب البيانات المحدثة من جوجل شيت
+    try {
+      const response = await fetch(SCRIPT_URL);
+      let serverData = await response.json();
+
+      if (typeof serverData === 'string') {
+        try { serverData = JSON.parse(serverData); } catch (e) {}
+      }
+
+      if (Array.isArray(serverData)) {
+        if (serverData.length > 0) {
+          // تحديث المهام بالبيانات القادمة من جوجل شيت
+          tasks = serverData;
+          localStorage.setItem('my_tasks_data', JSON.stringify(tasks));
+          renderTasks();
+          setSyncStatus('متزامن مع جوجل شيت', 'success');
+        } else if (tasks.length > 0) {
+          // إذا كان الشيت فارغاً ولديك مهام محلياً، رفع البيانات للشيت
+          await syncData();
+        } else {
+          setSyncStatus('لا توجد مهام', 'success');
+        }
+      }
+    } catch (error) {
+      console.error("خطأ في الاتصال بالخدمة:", error);
+      setSyncStatus('يعمل أوفلاين (محتوى محلي)', 'error');
+    }
+  }
+
+  // مزامنة ورفع المهام الحالية إلى جوجل شيت
+  async function syncData() {
+    setSyncStatus('جاري الحفظ...', 'syncing');
+    
+    // حفظ محلي أولاً
+    localStorage.setItem('my_tasks_data', JSON.stringify(tasks));
+
+    try {
+      // إرسال البيانات لجوجل شيت عبر طلب POST
+      await fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(tasks)
+      });
+
+      setSyncStatus('تم الحفظ والمتزامنة', 'success');
+    } catch (error) {
+      console.error("خطأ في المزامنة مع جوجل شيت:", error);
+      setSyncStatus('خطأ بالمزامنة (مخزن محلياً)', 'error');
+    }
+  }
+
+  // إضافة مهمة جديدة
+  function addTask() {
+    const input = document.getElementById('newTaskInput');
+    const title = input.value.trim();
+    if (!title) return;
+
+    const newTask = {
+      id: Date.now().toString(),
+      title: title,
+      completed: false,
+      steps: []
+    };
+
+    tasks.push(newTask);
+    input.value = '';
+    renderTasks();
+    syncData();
+  }
+
+  // تغيير حالة المهمة (مكتملة / غير مكتملة)
+  function toggleTask(taskId) {
+    const task = tasks.find(t => t.id === taskId);
+    if (task) {
+      task.completed = !task.completed;
+      renderTasks();
+      syncData();
+    }
+  }
+
+  // حذف مهمة
+  function deleteTask(taskId) {
+    tasks = tasks.filter(t => t.id !== taskId);
+    renderTasks();
+    syncData();
+  }
+
+  // إضافة خطوة فرعية لمهمة
+  function addStep(taskId) {
+    const input = document.getElementById(`step-input-${taskId}`);
+    const stepText = input.value.trim();
+    if (!stepText) return;
+
+    const task = tasks.find(t => t.id === taskId);
+    if (task) {
+      if (!task.steps) task.steps = [];
+      task.steps.push({
+        id: Date.now().toString(),
+        text: stepText,
+        completed: false
+      });
+      renderTasks();
+      syncData();
+    }
+  }
+
+  // تغيير حالة الخطوة الفرعية
+  function toggleStep(taskId, stepId) {
+    const task = tasks.find(t => t.id === taskId);
+    if (task && task.steps) {
+      const step = task.steps.find(s => s.id === stepId);
+      if (step) {
+        step.completed = !step.completed;
+        renderTasks();
+        syncData();
+      }
+    }
+  }
+
+  // حذف خطوة فرعية
+  function deleteStep(taskId, stepId) {
+    const task = tasks.find(t => t.id === taskId);
+    if (task && task.steps) {
+      task.steps = task.steps.filter(s => s.id !== stepId);
+      renderTasks();
+      syncData();
+    }
+  }
+
+  // عرض المهام والخطوات في الواجهة
+  function renderTasks() {
+    const container = document.getElementById('tasksList');
+    container.innerHTML = '';
+
+    tasks.forEach(task => {
+      const taskDiv = document.createElement('div');
+      taskDiv.className = 'task-item';
+
+      const stepsHTML = (task.steps || []).map(step => `
+        <div class="step-item">
+          <input type="checkbox" ${step.completed ? 'checked' : ''} onchange="toggleStep('${task.id}', '${step.id}')">
+          <span class="step-text ${step.completed ? 'completed' : ''}">${escapeHtml(step.text)}</span>
+          <button class="btn-delete" onclick="deleteStep('${task.id}', '${step.id}')">✕</button>
+        </div>
+      `).join('');
+
+      taskDiv.innerHTML = `
+        <div class="task-header">
+          <div>
+            <input type="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask('${task.id}')">
+            <span class="task-title ${task.completed ? 'completed' : ''}">${escapeHtml(task.title)}</span>
+          </div>
+          <button class="btn-delete" onclick="deleteTask('${task.id}')">حذف المهمة</button>
+        </div>
+
+        <div class="steps-list">
+          ${stepsHTML}
+          <div class="add-step-form">
+            <input type="text" id="step-input-${task.id}" placeholder="إضافة خطوة فرعية...">
+            <button onclick="addStep('${task.id}')">إضافة خطوة</button>
+          </div>
+        </div>
+      `;
+
+      container.appendChild(taskDiv);
+    });
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+</script>
+
+</body>
+</html>
