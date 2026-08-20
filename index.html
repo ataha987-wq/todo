@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>شركة شموع الماضي - مُتتبع المهام والخطوات</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#5a3818">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <!-- مكتبة إنشاء ملفات Excel حقيقية (.xlsx) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background-color: #fcfbf9; color: #334155; height: 100vh; overflow: hidden; }
+    
+    /* ---------------- شاشة تسجيل الدخول ---------------- */
+    .login-overlay { position: fixed; inset: 0; background: linear-gradient(135deg, #4a2c11 0%, #2b1808 100%); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 1rem; }
+    .login-card { background: white; border-radius: 1.25rem; padding: 2.5rem 2rem; width: 100%; max-width: 24rem; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.3); border: 2px solid #d4af37; }
+    .login-logo { width: 100%; max-width: 220px; height: auto; margin: 0 auto 1.5rem auto; display: block; object-fit: contain; }
+    .login-title { font-size: 1.2rem; font-weight: bold; color: #4a2c11; margin-bottom: 1.5rem; }
+    .login-input { width: 100%; padding: 0.85rem; border: 1.5px solid #cbd5e1; border-radius: 0.6rem; font-size: 1.1rem; text-align: center; outline: none; margin-bottom: 1rem; transition: border-color 0.2s; }
+    .login-input:focus { border-color: #8c5828; box-shadow: 0 0 0 3px rgba(140, 88, 40, 0.15); }
+    .login-btn { width: 100%; background: #5a3818; color: white; border: none; padding: 0.85rem; border-radius: 0.6rem; font-size: 1rem; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+    .login-btn:hover { background: #3d240e; }
+    .login-error { color: #dc2626; font-size: 0.875rem; margin-top: 0.75rem; display: none; font-weight: 500; }
+
+    /* ---------------- التخطيط الرئيسي للتطبيق ---------------- */
+    .app-container { display: flex; flex-direction: column; height: 100vh; width: 100vw; }
+    @media (min-width: 768px) { .app-container { flex-direction: row; } }
+    
+    .main-panel { flex: 1; display: flex; flex-direction: column; padding: 1.5rem; overflow-y: auto; border-left: 1px solid #e2e8f0; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; background: white; padding: 0.75rem 1.25rem; border-radius: 0.75rem; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02); flex-wrap: wrap; gap: 0.5rem; }
+    
+    .app-header-brand { display: flex; align-items: center; gap: 1rem; }
+    .header-logo { height: 48px; width: auto; object-fit: contain; }
+    .header h1 { font-size: 1.25rem; font-weight: bold; color: #4a2c11; }
+    
+    .btn { background-color: #5a3818; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem; transition: background 0.2s; font-weight: 500; }
+    .btn:hover { background-color: #3d240e; }
+    .btn-secondary { background-color: white; border: 1px solid #cbd5e1; color: #475569; }
+    .btn-secondary:hover { background-color: #f1f5f9; }
+    .btn-danger { background-color: #ef4444; color: white; }
+    .btn-danger:hover { background-color: #dc2626; }
+    
+    .input-task { width: 100%; padding: 0.85rem; border: 2px solid #5a3818; border-radius: 0.6rem; font-size: 1rem; outline: none; margin-bottom: 1.5rem; background: white; }
+    .input-task:focus { box-shadow: 0 0 0 3px rgba(90, 56, 24, 0.15); }
+    
+    .section-title { font-size: 0.875rem; font-weight: 700; color: #8c5828; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    .task-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 2rem; }
+    
+    .task-card { display: flex; justify-content: space-between; align-items: center; padding: 0.85rem 1rem; background-color: white; border: 1px solid #e2e8f0; border-radius: 0.6rem; cursor: pointer; transition: all 0.2s; }
+    .task-card:hover { border-color: #d4af37; box-shadow: 0 2px 5px rgba(0,0,0,0.04); }
+    .task-card.selected { border-color: #5a3818; border-width: 2px; background-color: #fdfbf7; }
+    
+    .task-left { display: flex; align-items: center; gap: 0.75rem; overflow: hidden; }
+    .task-checkbox { width: 1.15rem; height: 1.15rem; cursor: pointer; accent-color: #5a3818; }
+    
+    .task-text-active { color: #2b1808; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .task-text-completed { color: #94a3b8; text-decoration: line-through; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .task-date { font-size: 0.75rem; color: #94a3b8; white-space: nowrap; margin-left: 0.5rem; }
+    
+    .pin-badge { font-size: 0.7rem; background: #fef3c7; color: #92400e; padding: 0.1rem 0.4rem; border-radius: 0.25rem; font-weight: 600; }
+    
+    .side-panel { width: 100%; background-color: white; border-right: 1px solid #e2e8f0; padding: 1.5rem; display: flex; flex-direction: column; box-shadow: -2px 0 10px rgba(0,0,0,0.03); }
+    @media (min-width: 768px) { .side-panel { width: 25rem; } }
+    
+    .hidden { display: none !important; }
+    
+    .step-input-group { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+    .step-input { flex: 1; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 0.4rem; font-size: 0.875rem; outline: none; }
+    
+    .steps-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.75rem; }
+    .step-card { background-color: #fcfbf9; padding: 0.75rem 1rem; border-radius: 0.5rem; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; }
+    
+    .step-content { flex: 1; }
+    .step-text { color: #1e293b; font-size: 0.875rem; font-weight: 500; word-break: break-word; }
+    .step-time { font-size: 0.75rem; color: #94a3b8; margin-top: 0.25rem; display: block; }
+    
+    .step-actions { display: flex; gap: 0.35rem; align-items: center; }
+    .step-action-btn { background: none; border: none; cursor: pointer; font-size: 0.85rem; padding: 0.2rem 0.4rem; border-radius: 0.25rem; transition: background 0.2s; }
+    .step-action-btn:hover { background-color: #f1f5f9; }
+    .step-edit-btn { color: #2563eb; }
+    .step-delete-btn { color: #dc2626; }
+    
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; padding: 1rem; z-index: 50; }
+    .modal-box { background: white; padding: 1.5rem; border-radius: 0.75rem; width: 100%; max-width: 28rem; }
+    .modal-field { margin-bottom: 1rem; }
+    .modal-field label { display: block; font-size: 0.875rem; color: #475569; margin-bottom: 0.25rem; }
+    .modal-field input, .modal-field select { width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 0.375rem; }
+    
+    .toast { position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%); background: #334155; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-size: 0.875rem; z-index: 200; transition: opacity 0.3s; }
+    .toast.error { background: #dc2626; }
+    .toast.success { background: #16a34a; }
+  </style>
+</head>
+<body>
+
+  <!-- شاشة تسجيل الدخول -->
+  <div id="loginOverlay" class="login-overlay">
+    <div class="login-card">
+      <img src="logo.png" alt="شركة شموع الماضي" class="login-logo" id="mainLoginLogo" onerror="handleLogoError(this)">
+      <div class="login-title">تسجيل الدخول للنظام</div>
+      <input type="password" id="passwordInput" class="login-input" placeholder="أدخل كلمة المرور..." onkeydown="if(event.key==='Enter') checkPassword()">
+      <button onclick="checkPassword()" class="login-btn">دخول</button>
+      <div id="loginError" class="login-error">كلمة المرور غير صحيحة!</div>
+    </div>
+  </div>
+
+  <!-- محتوى التطبيق الرئيسي -->
+  <div id="appContainer" class="app-container hidden">
+    <!-- العمود الرئيسي للمهام -->
+    <div class="main-panel">
+      <div class="header">
+        <div class="app-header-brand">
+          <img src="logo.png" alt="Logo" class="header-logo" id="mainHeaderLogo" onerror="handleLogoError(this)">
+          <h1>إدارة المهام والخطوات</h1>
+        </div>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <button onclick="openExportModal()" class="btn">تصدير تقرير 📄</button>
+          <button onclick="logout()" class="btn btn-danger" title="تسجيل الخروج">خروج 🔒</button>
+        </div>
+      </div>
+
+      <!-- إضافة مهمة جديدة -->
+      <input type="text" id="newTaskInput" placeholder="اكتب المهمة واضغط Enter..." class="input-task" onkeydown="handleNewTask(event)">
+
+      <!-- قائمة المهام النشطة -->
+      <div>
+        <div class="section-title">المهام الجارية</div>
+        <div id="activeTasks" class="task-list"></div>
+        <div id="noActiveTasks" style="color: #94a3b8; font-size: 0.875rem; padding: 0.5rem 0;">لا توجد مهام جارية</div>
+      </div>
+
+      <!-- قائمة المهام المنفذة -->
+      <div style="margin-top: auto; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
+        <div class="section-title">المهام المنفذة</div>
+        <div id="completedTasks" class="task-list"></div>
+        <div id="noCompletedTasks" style="color: #94a3b8; font-size: 0.875rem; padding: 0.5rem 0;">لا توجد مهام منفذة</div>
+      </div>
+    </div>
+
+    <!-- العمود الجانبي للخطوات -->
+    <div id="sidePanel" class="side-panel hidden">
+      <div id="sidePanelContent" class="hidden" style="flex-direction: column; height: 100%;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem; margin-bottom: 1rem;">
+          <span style="font-size: 0.75rem; color: #94a3b8;" id="taskCreatedAt"></span>
+          <div style="display: flex; gap: 0.5rem;">
+            <button onclick="editCurrentTask()" style="color: #2563eb; border: none; background: none; cursor: pointer; font-size: 0.75rem; font-weight: 600;">تعديل المهمة</button>
+            <button onclick="togglePinCurrentTask()" id="pinBtn" style="color: #d97706; border: none; background: none; cursor: pointer; font-size: 0.75rem; font-weight: 600;">📌 تثبيت</button>
+            <button onclick="deleteCurrentTask()" style="color: #dc2626; border: none; background: none; cursor: pointer; font-size: 0.75rem; font-weight: 600;">حذف المهمة</button>
+          </div>
+        </div>
+
+        <h2 id="selectedTaskTitle" style="font-size: 1.2rem; margin-bottom: 1rem; word-break: break-word;"></h2>
+
+        <!-- إدخال خطوة جديدة -->
+        <div class="step-input-group">
+          <input type="text" id="newStepInput" placeholder="إضافة خطوة جديدة..." class="step-input" onkeydown="if(event.key==='Enter') addStep()">
+          <button onclick="addStep()" class="btn">إضافة</button>
+        </div>
+
+        <!-- قائمة الخطوات -->
+        <div class="steps-container" id="stepsList"></div>
+      </div>
+
+      <div id="noTaskSelected" style="flex: 1; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 0.875rem;">
+        اختر مهمة من القائمة لمشاهدة وتوثيق الخطوات
+      </div>
+    </div>
+  </div>
+
+  <!-- مودال التصدير -->
+  <div id="exportModal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <h3 style="font-size: 1.125rem; font-weight: bold; margin-bottom: 1rem; color: #4a2c11;">تصدير تقرير المهام</h3>
+      
+      <div class="modal-field">
+        <label>تصفية حسب التاريخ:</label>
+        <div style="display: flex; gap: 0.5rem;">
+          <input type="date" id="exportFrom">
+          <input type="date" id="exportTo">
+        </div>
+      </div>
+
+      <div class="modal-field">
+        <label>نوع المهام:</label>
+        <select id="exportFilterType">
+          <option value="all">كل المهام</option>
+          <option value="active">المهام الجارية فقط</option>
+          <option value="completed">المهام المنفذة فقط</option>
+        </select>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem;">
+        <button onclick="closeExportModal()" class="btn btn-secondary">إلغاء</button>
+        <button onclick="generateReport()" class="btn">تصدير (Excel)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast للتنبيهات -->
+  <div id="toast" class="toast" style="display:none;"></div>
+
+  <script>
+    // ===== إعدادات التطبيق =====
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyTlIa-gvB9yzdQaVdDe2SQE_DU2RaHW_EmBoaELZr70RxakVYkdaHVOtsYSoKCj7mk/exec";
+    const APP_PASSWORD = "2023"; // يمكن نقل التحقق لسيرفر لاحقاً
+
+    let tasks = [];
+    let selectedTaskId = null;
+
+    // مدة التحديث التلقائي في الخلفية (كل 15 ثانية)
+    const AUTO_SYNC_INTERVAL = 15000;
+    let autoSyncTimer = null;
+    let isSyncingFromServer = false;
+
+    // ===== تسجيل Service Worker =====
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(err => {
+        console.error('تعذر تسجيل Service Worker:', err);
+      });
+    }
+
+    // ===== معالجة الشعار عند عدم وجود الملف المحلي =====
+    function handleLogoError(imgEl) {
+      imgEl.onerror = null;
+      imgEl.src = "data:image/svg+xml;utf8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="220" height="70" viewBox="0 0 220 70"><rect width="100%" height="100%" fill="#ffffff" rx="10"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#5a3818" font-family="sans-serif" font-size="16" font-weight="bold">شركة شموع الماضي</text></svg>');
+    }
+
+    // ===== Toast للتنبيهات =====
+    function showToast(msg, type) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast ' + (type || '');
+      t.style.display = 'block';
+      t.style.opacity = '1';
+      setTimeout(() => { t.style.opacity = '0'; setTimeout(() => { t.style.display = 'none'; }, 300); }, 2500);
+    }
+
+    // ===== إدارة تسجيل الدخول =====
+    function checkPassword() {
+      const input = document.getElementById('passwordInput').value;
+      if (input === APP_PASSWORD) {
+        localStorage.setItem('app_logged_in', 'true');
+        document.getElementById('loginOverlay').classList.add('hidden');
+        document.getElementById('appContainer').classList.remove('hidden');
+        loadTasks();
+        startAutoSync();
+      } else {
+        document.getElementById('loginError').style.display = 'block';
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('app_logged_in');
+      document.getElementById('passwordInput').value = '';
+      document.getElementById('loginError').style.display = 'none';
+      document.getElementById('loginOverlay').classList.remove('hidden');
+      document.getElementById('appContainer').classList.add('hidden');
+      if (autoSyncTimer) clearInterval(autoSyncTimer);
+      tasks = [];
+      selectedTaskId = null;
+    }
+
+    // ===== إرسال طلب للجوجل سكريبت (GET — عشان نتجنب CORS) =====
+    async function gasGet(action, extraParams) {
+      let url = SCRIPT_URL + "?action=" + encodeURIComponent(action);
+      if (extraParams) {
+        for (const key in extraParams) {
+          if (extraParams[key] !== undefined && extraParams[key] !== null) {
+            url += "&" + encodeURIComponent(key) + "=" + encodeURIComponent(extraParams[key]);
+          }
+        }
+      }
+      const res = await fetch(url);
+      return res.json();
+    }
+
+    // ===== تحميل البيانات من الشيت =====
+    async function loadTasks() {
+      // عرض البيانات المحلية أولاً (عشان الواجهة ماتقفشش)
+      const saved = localStorage.getItem('my_tasks_data');
+      if (saved) {
+        try {
+          tasks = JSON.parse(saved);
+          renderTasks();
+        } catch(e) { console.error(e); }
+      }
+
+      // جلب البيانات الحقيقية من الشيت
+      try {
+        const data = await gasGet('getAll');
+        if (data && data.tasks && Array.isArray(data.tasks)) {
+          tasks = data.tasks;
+          localStorage.setItem('my_tasks_data', JSON.stringify(tasks));
+          renderTasks();
+        } else if (data && data.error) {
+          console.error('خطأ من الخادم:', data.error);
+          showToast('خطأ في جلب البيانات', 'error');
+        }
+      } catch(e) {
+        console.error('تعذر الجلب من الخادم، تم الاعتماد على النسخة المحلية:', e);
+        showToast('العمل بدون اتصال', 'error');
+      }
+    }
+
+    // ===== تحديث صامت في الخلفية =====
+    async function silentRefresh() {
+      if (isSyncingFromServer) return;
+      isSyncingFromServer = true;
+      try {
+        const data = await gasGet('getAll');
+        if (data && data.tasks && Array.isArray(data.tasks)) {
+          tasks = data.tasks;
+          localStorage.setItem('my_tasks_data', JSON.stringify(tasks));
+          renderTasks();
+        }
+      } catch(e) {
+        console.error('تعذر التحديث التلقائي:', e);
+      } finally {
+        isSyncingFromServer = false;
+      }
+    }
+
+    function startAutoSync() {
+      if (autoSyncTimer) clearInterval(autoSyncTimer);
+      autoSyncTimer = setInterval(silentRefresh, AUTO_SYNC_INTERVAL);
+    }
+
+    // تحديث فوري لما ترجع لصفحة التطبيق
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && localStorage.getItem('app_logged_in') === 'true') {
+        silentRefresh();
+      }
+    });
+
+    // ===== عرض المهام =====
+    function renderTasks() {
+      const activeContainer = document.getElementById('activeTasks');
+      const completedContainer = document.getElementById('completedTasks');
+      activeContainer.innerHTML = '';
+      completedContainer.innerHTML = '';
+
+      // ترتيب: المثبتة أول، ثم حسب التاريخ (الأحدث أولاً)
+      tasks.sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
+
+      let activeCount = 0;
+      let completedCount = 0;
+
+      tasks.forEach(task => {
+        const div = document.createElement('div');
+        div.className = 'task-card' + (selectedTaskId === task.taskId ? ' selected' : '');
+        div.onclick = () => selectTask(task.taskId);
+
+        const pinHTML = task.pinned ? '<span class="pin-badge">📌 مثبتة</span>' : '';
+        const dateStr = task.createdAt ? formatDisplayDate(task.createdAt) : '';
+        const textClass = task.completed ? 'task-text-completed' : 'task-text-active';
+
+        div.innerHTML = `
+          <div class="task-left">
+            <input type="checkbox" ${task.completed ? 'checked' : ''} 
+              onclick="event.stopPropagation(); toggleTaskComplete('${task.taskId}')"
+              class="task-checkbox">
+            <span class="${textClass}">${escapeHtml(task.text)}</span>
+            ${pinHTML}
+          </div>
+          <span class="task-date">${dateStr}</span>
+        `;
+
+        if (task.completed) {
+          completedContainer.appendChild(div);
+          completedCount++;
+        } else {
+          activeContainer.appendChild(div);
+          activeCount++;
+        }
+      });
+
+      document.getElementById('noActiveTasks').style.display = activeCount > 0 ? 'none' : 'block';
+      document.getElementById('noCompletedTasks').style.display = completedCount > 0 ? 'none' : 'block';
+
+      if (selectedTaskId) {
+        renderSidePanel();
+      }
+    }
+
+    // ===== تنسيق التاريخ للعرض =====
+    function formatDisplayDate(isoStr) {
+      try {
+        const d = new Date(isoStr);
+        if (isNaN(d.getTime())) return isoStr.split('T')[0] || isoStr.split(' ')[0] || '';
+        return d.toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' });
+      } catch(e) {
+        return '';
+      }
+    }
+
+    function formatDisplayDateTime(isoStr) {
+      try {
+        const d = new Date(isoStr);
+        if (isNaN(d.getTime())) return isoStr;
+        return d.toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      } catch(e) {
+        return isoStr;
+      }
+    }
+
+    // ===== حماية XSS =====
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ===== إضافة مهمة جديدة =====
+    async function handleNewTask(e) {
+      if (e.key === 'Enter' && e.target.value.trim() !== '') {
+        const text = e.target.value.trim();
+        e.target.value = '';
+
+        // إضافة محلياً أولاً (عشان الواجهة تتحدث فوراً)
+        const tempId = 'temp_' + Date.now();
+        const now = new Date().toISOString();
+        const newTask = {
+          taskId: tempId,
+          text: text,
+          createdAt: now,
+          completed: false,
+          completedAt: null,
+          pinned: false,
+          steps: []
+        };
+        tasks.unshift(newTask);
+        selectTask(tempId);
+        renderTasks();
+
+        // إرسال للجوجل شيت
+        try {
+          const result = await gasGet('addTask', { text: text });
+          if (result && result.success) {
+            // تحديث الـ temp ID بالـ ID الحقيقي من الشيت
+            const idx = tasks.findIndex(t => t.taskId === tempId);
+            if (idx !== -1) {
+              tasks[idx].taskId = result.taskId;
+              if (selectedTaskId === tempId) selectedTaskId = result.taskId;
+            }
+            localStorage.setItem('my_tasks_data', JSON.stringify(tasks));
+            renderTasks();
+            showToast('تمت إضافة المهمة ✅', 'success');
+          } else {
+            showToast('خطأ في إضافة المهمة', 'error');
+          }
+        } catch(e) {
+          showToast('المهمة محلية — لم تصل للشيت', 'error');
+          console.error(e);
+        }
+      }
+    }
+
+    // ===== تبديل حالة الإنجاز =====
+    async function toggleTaskComplete(taskId) {
+      const task = tasks.find(t => t.taskId === taskId);
+      if (!task) return;
+
+      // تحديث محلي فوري
+      task.completed = !task.completed;
+      task.completedAt = task.completed ? new Date().toISOString() : null;
+      localStorage.setItem('my_tasks_data', JSON.stringify(tasks));
+      renderTasks();
+
+      // إرسال للشيت
+      try {
+        await gasGet('toggleComplete', { taskId: taskId });
+      } catch(e) {
+        console.error('خطأ في تحديث الشيت:', e);
+      }
+    }
+
+    // ===== اختيار مهمة =====
+    function selectTask(taskId) {
+      selectedTaskId = taskId;
+      const panel = document.getElementById('sidePanel');
+      if (window.innerWidth < 768) {
+        // على الموبايل نعرض اللوحة الجانبية فوق المحتوى
+        panel.style.position = 'fixed';
+        panel.style.inset = '0';
+        panel.style.zIndex = '30';
+        panel.style.width = '100%';
+      } else {
+        panel.style.position = '';
+        panel.style.inset = '';
+        panel.style.zIndex = '';
+      }
+      panel.classList.remove('hidden');
+      renderTasks();
+    }
+
+    function closeSidePanel() {
+      document.getElementById('sidePanel').classList.add('hidden');
+      selectedTaskId = null;
+      renderTasks();
+    }
+
+    // ===== عرض اللوحة الجانبية =====
+    function renderSidePanel() {
+      const task = tasks.find(t => t.taskId === selectedTaskId);
+      if (!task) {
+        document.getElementById('noTaskSelected').classList.remove('hidden');
+        document.getElementById('sidePanelContent').classList.add('hidden');
+        return;
+      }
+
+      document.getElementById('noTaskSelected').classList.add('hidden');
+      const content = document.getElementById('sidePanelContent');
+      content.classList.remove('hidden');
+      content.style.display = 'flex';
+
+      const titleEl = document.getElementById('selectedTaskTitle');
+      titleEl.innerText = task.text;
+      titleEl.className = task.completed ? 'task-text-completed' : 'task-text-active';
+
+      document.getElementById('taskCreatedAt').innerText = 'تاريخ الإنشاء: ' + formatDisplayDateTime(task.createdAt);
+
+      // زر التثبيت
+      const pinBtn = document.getElementById('pinBtn');
+      pinBtn.textContent = task.pinned ? '📌 إلغاء التثبيت' : '📌 تثبيت';
+
+      const stepsList = document.getElementById('stepsList');
+      stepsList.innerHTML = '';
+
+      (task.steps || []).forEach(step => {
+        const stepDiv = document.createElement('div');
+        stepDiv.className = 'step-card';
+        stepDiv.innerHTML = `
+          <div class="step-content">
+            <p class="step-text">${escapeHtml(step.text)}</p>
+            <span class="step-time">${formatDisplayDateTime(step.date)}</span>
+          </div>
+          <div class="step-actions">
+            <button onclick="editStep('${step.stepId}')" class="step-action-btn step-edit-btn" title="تعديل الخطوة">✏️ تعديل</button>
+            <button onclick="deleteStep('${step.stepId}')" class="step-action-btn step-delete-btn" title="حذف الخطوة">🗑️ حذف</button>
+          </div>
+        `;
+        stepsList.appendChild(stepDiv);
+      });
+    }
+
+    // ===== إضافة خطوة =====
+    async function addStep() {
+      const input = document.getElementById('newStepInput');
+      if (!input.value.trim() || !selectedTaskId) return;
+
+      const text = input.value.trim();
+      const task = tasks.find(t => t.taskId === selectedTaskId);
+      if (!task) return;
+
+      // إضافة محلية فورية
+      const tempStepId = 'temp_step_' + Date.now();
+      const now = new Date().toISOString();
+      if (!task.steps) task.steps = [];
+      task.steps.push({ stepId: tempStepId, text: text, date: now });
+      input.value = '';
+      localStorage.setItem('my_tasks_data', JSON.stringify(tasks));
+      renderSidePanel();
+
+      // إرسال للشيت
+      try {
+        const result = await gasGet('addStep', { taskId: selectedTaskId, text: text });
+        if (result && result.success) {
+          // تحديث بالـ ID الحقيقي
+          const step = task.steps.find(s => s.stepId === tempStepId);
+          if (step) step.stepId = result.stepId;
+          localStorage.setItem('my_tasks_data', JSON.stringify(tasks));
+          showToast('تمت إضافة الخطوة ✅', 'success');
+        }
+      } catch(e) {
+        showToast('الخطوة محلية — لم تصل للشيت', 'error');
+        console.error(e);
+      }
+    }
+
+    // ===== تعديل خطوة =====
+    async function editStep(stepId) {
+      const task = tasks.find(t => t.taskId === selectedTaskId);
+      if (!task || !task.steps) return;
+      const step = task.steps.find(s => s.stepId === stepId);
+      if (!step) return;
+
+      const newText = prompt('تعديل نص الخطوة:', step.text);
+      if (newText === null || newText.trim() === '') return;
+
+      // تحديث محلي
+      step.text = newText.trim();
+      localStorage.setItem('my_tasks_data', JSON.stringify(tasks));
+      renderSidePanel();
+
+      // إرسال للشيت (فقط لو مش temp)
+      if (!stepId.startsWith('temp_')) {
+        try {
+          await gasGet('editStep', { stepId: stepId, text: newText.trim() });
+          showToast('تم تعديل الخطوة ✅', 'success');
+        } catch(e) {
+          showToast('التعديل محلي فقط', 'error');
+          console.error(e);
+        }
+      }
+    }
+
+    // ===== حذف خطوة =====
+    async function deleteStep(stepId) {
+      if (!confirm('هل أنت متأكد من حذف هذه الخطوة؟')) return;
+
+      const task = tasks.find(t => t.taskId === selectedTaskId);
+      if (!task || !task.steps) return;
+
+      // حذف محلي
+      task.steps = task.steps.filter(s => s.stepId !== stepId);
+      localStorage.setItem('my_tasks_data', JSON.stringify(tasks));
+      renderSidePanel();
+
+      // حذف من الشيت (فقط لو مش temp)
+      if (!stepId.startsWith('temp_')) {
+        try {
+          await gasGet('deleteStep', { stepId: stepId });
+          showToast('تم حذف الخطوة ✅', 'success');
+        } catch(e) {
+          showToast('الحذف محلي فقط', 'error');
+          console.error(e);
+        }
+      }
+    }
+
+    // ===== تعديل مهمة =====
+    async function editCurrentTask() {
+      const task = tasks.find(t => t.taskId === selectedTaskId);
+      if (!task) return;
+
+      const newTitle = prompt('تعديل اسم المهمة:', task.text);
+      if (newTitle === null || newTitle.trim() === '') return;
+
+      // تحديث محلي
+      task.text = newTitle.trim();
+      localStorage.setItem('my_tasks_data', JSON.stringify(tasks));
+      renderTasks();
+
+      // إرسال للشيت
+      if (!selectedTaskId.startsWith('temp_')) {
+        try {
+          await gasGet('editTask', { taskId: selectedTaskId, text: newTitle.trim() });
+          showToast('تم تعديل المهمة ✅', 'success');
+        } catch(e) {
+          showToast('التعديل محلي فقط', 'error');
+          console.error(e);
+        }
+      }
+    }
+
+    // ===== تثبيت/إلغاء تثبيت مهمة =====
+    async function togglePinCurrentTask() {
+      const task = tasks.find(t => t.taskId === selectedTaskId);
+      if (!task) return;
+
+      // تحديث محلي
+      task.pinned = !task.pinned;
+      localStorage.setItem('my_tasks_data', JSON.stringify(tasks));
+      renderTasks();
+
+      // إرسال للشيت
+      if (!selectedTaskId.startsWith('temp_')) {
+        try {
+          await gasGet('togglePin', { taskId: selectedTaskId });
+          showToast(task.pinned ? 'تم تثبيت المهمة 📌' : 'تم إلغاء التثبيت', 'success');
+        } catch(e) {
+          console.error(e);
+        }
+      }
+    }
+
+    // ===== حذف مهمة =====
+    async function deleteCurrentTask() {
+      if (!confirm('هل أنت متأكد من حذف هذه المهمة بالكامل مع كل خطواتها؟')) return;
+
+      const taskIdToDelete = selectedTaskId;
+      tasks = tasks.filter(t => t.taskId !== taskIdToDelete);
+      selectedTaskId = null;
+      document.getElementById('sidePanelContent').classList.add('hidden');
+      document.getElementById('noTaskSelected').classList.remove('hidden');
+      localStorage.setItem('my_tasks_data', JSON.stringify(tasks));
+      renderTasks();
+
+      // حذف من الشيت
+      if (!taskIdToDelete.startsWith('temp_')) {
+        try {
+          await gasGet('deleteTask', { taskId: taskIdToDelete });
+          showToast('تم حذف المهمة ✅', 'success');
+        } catch(e) {
+          showToast('الحذف محلي فقط', 'error');
+          console.error(e);
+        }
+      }
+    }
+
+    // ===== التصدير =====
+    function openExportModal() { document.getElementById('exportModal').classList.remove('hidden'); }
+    function closeExportModal() { document.getElementById('exportModal').classList.add('hidden'); }
+
+    async function generateReport() {
+      const from = document.getElementById('exportFrom').value;
+      const to = document.getElementById('exportTo').value;
+      const filterType = document.getElementById('exportFilterType').value;
+
+      let filtered = [...tasks];
+
+      if (filterType === 'active') filtered = filtered.filter(t => !t.completed);
+      if (filterType === 'completed') filtered = filtered.filter(t => t.completed);
+
+      if (from) filtered = filtered.filter(t => {
+        const d = t.createdAt ? t.createdAt.split('T')[0] : '';
+        return d >= from;
+      });
+      if (to) filtered = filtered.filter(t => {
+        const d = t.createdAt ? t.createdAt.split('T')[0] : '';
+        return d <= to;
+      });
+
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('تقرير المهام', {
+        views: [{ rightToLeft: true }]
+      });
+
+      worksheet.columns = [
+        { header: 'المهمة', key: 'text', width: 30 },
+        { header: 'تاريخ الإنشاء', key: 'createdAt', width: 20 },
+        { header: 'حالة المهمة', key: 'status', width: 15 },
+        { header: 'الخطوة', key: 'stepText', width: 35 },
+        { header: 'تاريخ الخطوة', key: 'stepDate', width: 20 }
+      ];
+
+      filtered.forEach(t => {
+        const status = t.completed ? 'منفذة' : 'جارية';
+        if (!t.steps || t.steps.length === 0) {
+          worksheet.addRow({ text: t.text, createdAt: formatDisplayDate(t.createdAt), status: status, stepText: '-', stepDate: '-' });
+        } else {
+          t.steps.forEach(s => {
+            worksheet.addRow({ text: t.text, createdAt: formatDisplayDate(t.createdAt), status: status, stepText: s.text, stepDate: formatDisplayDateTime(s.date) });
+          });
+        }
+      });
+
+      const headerRow = worksheet.getRow(1);
+      headerRow.font = { bold: true, color: { argb: 'FFFFFF' }, size: 11 };
+      headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '5A3818' } };
+      headerRow.alignment = { horizontal: 'right', vertical: 'middle' };
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'تقرير_المهام_' + new Date().toISOString().slice(0,10) + '.xlsx';
+      link.click();
+      closeExportModal();
+      showToast('تم تصدير التقرير 📄', 'success');
+    }
+
+    // ===== التحقق التلقائي عند التحميل =====
+    window.onload = () => {
+      if (localStorage.getItem('app_logged_in') === 'true') {
+        document.getElementById('loginOverlay').classList.add('hidden');
+        document.getElementById('appContainer').classList.remove('hidden');
+        loadTasks();
+        startAutoSync();
+      }
+    };
+  </script>
+</body>
+</html>

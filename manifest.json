@@ -1,0 +1,28 @@
+{
+  "name": "شركة شموع الماضي - متتبع المهام والخطوات",
+  "short_name": "متتبع المهام",
+  "description": "نظام إدارة المهام والخطوات لمكتب نائب الرئيس التنفيذي",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fcfbf9",
+  "theme_color": "#5a3818",
+  "lang": "ar",
+  "dir": "rtl",
+  "categories": ["productivity", "business"],
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
